@@ -13,7 +13,19 @@
     "@aws-amplify/ui-react": "^6.5.5",
     "aws-amplify": "^6.6.6",
     "react": "^18.2.0",
-    "react-dom": "^18.2.0"
+    "react-dom": "^18.2.0",
+
+    "@emailjs/browser": "^4.2.0",
+    "@react-three/drei": "^9.99.5",
+    "@react-three/fiber": "^8.15.16",
+    "clsx": "^2.1.0",
+    "framer-motion": "^11.0.8",
+    "leva": "^0.10.0",
+    "lucide-react": "^0.344.0",
+    "next": "14.2.10",
+    "react-hook-form": "^7.51.0",
+    "sonner": "^1.4.3",
+    "three": "^0.162.0"
   },
   "devDependencies": {
     "@aws-amplify/backend": "^1.5.0",
@@ -32,6 +44,11 @@
     "eslint-plugin-react-refresh": "^0.4.6",
     "tsx": "^4.7.2",
     "typescript": "^5.4.5",
-    "vite": "^5.4.10"
+    "vite": "^5.4.10",
+
+    "autoprefixer": "^10.0.1",
+    "eslint-config-next": "14.1.1",
+    "postcss": "^8",
+    "tailwindcss": "^3.3.0"
   }
 }
