@@ -47,8 +47,12 @@ import { OrbitControls } from "@react-three/drei"; // ability to rotate, pan, an
 import * as THREE from "three";            // main 3D library used under the hood.
 import { Leva, useControls } from "leva";  // live parameter controls in a UI panel.
 
+const minTemp = -20;
+const maxTemp = 50;
+
 // Renders a single "zone" in 3D space.
 const ThermalZone = ({ position, size, temperature }: { position: [number, number, number], size: [number, number, number], temperature: number }) => {
+
   // maps a temperature value to a specific color in HSL.
   const getColor = (temp: number) => {
     // const normalizedTemp = (temp + 20) / 70; // Normalize -20 to 50 range into 0 to 1
@@ -68,8 +72,7 @@ const ThermalZone = ({ position, size, temperature }: { position: [number, numbe
     // return new THREE.Color(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
     // //
       // Clamp the temperature between -20 and 50 degrees C
-      const minTemp = -20;
-      const maxTemp = 50;
+
       const clampedTemp = Math.max(minTemp, Math.min(maxTemp, temp));
   
       // Normalize temperature to a 0-1 range
@@ -98,8 +101,6 @@ const ThermalZone = ({ position, size, temperature }: { position: [number, numbe
 
 // Define the main component ThermalModel, which uses the above ThermalZone component and sets up the scene.
 export default function ThermalModel() {
-  const minTemp = -20;
-  const maxTemp = 50;
 
   // We initialize Leva controls outside of useEffect to avoid potential sandbox issues.
   // let controls;
