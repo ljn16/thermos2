@@ -98,14 +98,17 @@ const ThermalZone = ({ position, size, temperature }: { position: [number, numbe
 
 // Define the main component ThermalModel, which uses the above ThermalZone component and sets up the scene.
 export default function ThermalModel() {
+  const minTemp = -20;
+  const maxTemp = 50;
+
   // We initialize Leva controls outside of useEffect to avoid potential sandbox issues.
   // let controls;
   // try {
     // If there's an error, it will be caught below.
     const controls = useControls({
-      temp1: { value: 22, min: 10, max: 40, step: 1 },
-      temp2: { value: 30, min: 10, max: 40, step: 1 },
-      temp3: { value: 18, min: 10, max: 40, step: 1 },
+      temp1: { value: -20, min: minTemp, max: maxTemp, step: 1 },
+      temp2: { value: 30, min: minTemp, max: maxTemp, step: 1 },
+      temp3: { value: 50, min: minTemp, max: maxTemp, step: 1 },
     });
   // } catch (error) {
   //   console.error("Error initializing Leva controls:", error);
