@@ -48,9 +48,9 @@ import * as THREE from "three";            // main 3D library used under the hoo
 import { Leva, useControls } from "leva";  // live parameter controls in a UI panel.
 
 // Renders a single "zone" in 3D space.
-const ThermalZone = ({ position, size, temperature }) => {
+const ThermalZone = ({ position, size, temperature }: { position: [number, number, number], size: [number, number, number], temperature: number }) => {
   // maps a temperature value to a specific color in HSL.
-  const getColor = (temp) => {
+  const getColor = (temp: number) => {
     const t = Math.min(Math.max((temp - 15) / 20, 0), 1); // Normalize (15°C - 35°C range)
     return new THREE.Color().setHSL(0.67 - t * 0.67, 1, 0.5); // hue from blue to red depending on temperature.
   };
@@ -68,19 +68,19 @@ const ThermalZone = ({ position, size, temperature }) => {
 // Define the main component ThermalModel, which uses the above ThermalZone component and sets up the scene.
 export default function ThermalModel() {
   // We initialize Leva controls outside of useEffect to avoid potential sandbox issues.
-  let controls;
-  try {
+  // let controls;
+  // try {
     // If there's an error, it will be caught below.
-    controls = useControls({
+    const controls = useControls({
       temp1: { value: 22, min: 10, max: 40, step: 1 },
       temp2: { value: 30, min: 10, max: 40, step: 1 },
       temp3: { value: 18, min: 10, max: 40, step: 1 },
     });
-  } catch (error) {
-    console.error("Error initializing Leva controls:", error);
-    // If user expects something else, we can discuss.
-    return null;
-  }
+  // } catch (error) {
+  //   console.error("Error initializing Leva controls:", error);
+  //   // If user expects something else, we can discuss.
+  //   return null;
+  // }
 
   if (!controls) {
     // If useControls returned nothing, we skip rendering.
