@@ -51,8 +51,39 @@ import { Leva, useControls } from "leva";  // live parameter controls in a UI pa
 const ThermalZone = ({ position, size, temperature }: { position: [number, number, number], size: [number, number, number], temperature: number }) => {
   // maps a temperature value to a specific color in HSL.
   const getColor = (temp: number) => {
-    const t = Math.min(Math.max((temp - 15) / 20, 0), 1); // Normalize (15°C - 35°C range)
-    return new THREE.Color().setHSL(0.67 - t * 0.67, 1, 0.5); // hue from blue to red depending on temperature.
+    // const normalizedTemp = (temp + 20) / 70; // Normalize -20 to 50 range into 0 to 1
+    // const red = Math.round(normalizedTemp * 255);
+    // const blue = 255 - red;
+
+    // return new THREE.Color(`rgb(${red}, 0, ${blue})`);
+
+    // const t = Math.min(Math.max((temp - 15) / 20, 0), 1); // Normalize (15°C - 35°C range)
+    // return new THREE.Color().setHSL(0.67 - t * 0.67, 1, 0.5); // hue from blue to red depending on temperature.
+    // //
+    // const normalizedTemp = (temp + 20) / 70; // Normalize -20 to 50 range into 0 to 1
+    // const hue = (1 - normalizedTemp) * 240; // Map normalizedTemp to hue (240 = blue, 0 = red)
+    // const saturation = 100; // Full saturation for vibrant colors
+    // const lightness = 50; // 50% lightness for lighter colors
+
+    // return new THREE.Color(`hsl(${hue}, ${saturation}%, ${lightness}%)`);
+    // //
+      // Clamp the temperature between -20 and 50 degrees C
+      const minTemp = -20;
+      const maxTemp = 50;
+      const clampedTemp = Math.max(minTemp, Math.min(maxTemp, temp));
+  
+      // Normalize temperature to a 0-1 range
+      const normalized = (clampedTemp - minTemp) / (maxTemp - minTemp);
+  
+      // Map normalized value to an RGB scale where only red and blue are used
+      const red = normalized;
+      const blue = 1 - normalized;
+
+      // // Convert RGB to HSL color string
+      // const hslColor = `hsl(${240 * (1 - normalized)}, 100%, 50%)`;
+
+      // Return HSL or THREE.js color
+      return new THREE.Color(`rgb(${Math.round(red * 255)}, 0, ${Math.round(blue * 255)})`);
   };
 
   return (
