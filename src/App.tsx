@@ -43,7 +43,7 @@
 
 import { Canvas } from "@react-three/fiber";       // creates a 3D rendering canvas.
 import { OrbitControls } from "@react-three/drei"; // ability to rotate, pan, and zoom the scene.
-import { useState } from "react";
+// import { useState } from "react";
 import * as THREE from "three";            // main 3D library used under the hood.
 import { Leva, useControls } from "leva";  // live parameter controls in a UI panel.
 
