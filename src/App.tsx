@@ -43,13 +43,52 @@
 
 import { Canvas } from "@react-three/fiber";       // creates a 3D rendering canvas.
 import { OrbitControls } from "@react-three/drei"; // ability to rotate, pan, and zoom the scene.
-// import { useState } from "react";
+import { useState/* , useEffect */ } from "react";
 import * as THREE from "three";            // main 3D library used under the hood.
 import { Leva, useControls } from "leva";  // live parameter controls in a UI panel.
 
 const minTemp = -20;
 const maxTemp = 50;
 
+// Component to input floor dimensions
+interface Dimensions {
+  height: number;
+  width: number;
+}
+
+const FloorDimensionsInput = ({ dimensions, onDimensionsChange }: { dimensions: Dimensions, onDimensionsChange: (newDimensions: Dimensions) => void }) => {
+
+  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const { name, value } = e.target;
+    const newDimensions = { ...dimensions, [name]: parseInt(value, 10) };
+    // setDimensions((prev) => ({ ...prev, [name]: parseInt(value, 10) }));
+    onDimensionsChange(newDimensions);
+  };
+
+  return (
+    <div>
+      <label>
+        Height:
+        <input
+          type="number"
+          name="height"
+          value={dimensions.height}
+          onChange={handleChange}
+        />
+      </label>
+      <label>
+        Width:
+        <input
+          type="number"
+          name="width"
+          value={dimensions.width}
+          onChange={handleChange}
+        />
+      </label>
+    </div>
+  );
+};
+//!----------------------------------------------------------------
 // Renders a single "zone" in 3D space.
 const ThermalZone = ({ position, size, temperature }: { position: [number, number, number], size: [number, number, number], temperature: number }) => {
 
@@ -98,24 +137,20 @@ const ThermalZone = ({ position, size, temperature }: { position: [number, numbe
     </mesh>
   );
 };
+//!----------------------------------------------------------------
 
 // Define the main component ThermalModel, which uses the above ThermalZone component and sets up the scene.
 export default function ThermalModel() {
+  const minTemp = -20;
+  const maxTemp = 50;
+  const [dimensions, setDimensions] = useState({ height: 10, width: 10 });
 
   // We initialize Leva controls outside of useEffect to avoid potential sandbox issues.
-  // let controls;
-  // try {
-    // If there's an error, it will be caught below.
-    const controls = useControls({
-      temp1: { value: -20, min: minTemp, max: maxTemp, step: 1 },
-      temp2: { value: 30, min: minTemp, max: maxTemp, step: 1 },
-      temp3: { value: 50, min: minTemp, max: maxTemp, step: 1 },
-    });
-  // } catch (error) {
-  //   console.error("Error initializing Leva controls:", error);
-  //   // If user expects something else, we can discuss.
-  //   return null;
-  // }
+    const tempControls: { [key: string]: { value: number; min: number; max: number; step: number } } = {};
+    for (let i = 0; i < dimensions.width * dimensions.height; i++) {
+      tempControls[`temp${i + 1}`] = { value: 22, min: minTemp, max: maxTemp, step: 1 };
+    }
+  const controls = useControls(tempControls);
 
   if (!controls) {
     // If useControls returned nothing, we skip rendering.
@@ -126,11 +161,12 @@ export default function ThermalModel() {
     <>
       {/* Render the Leva panel for adjusting controls. */}
       <Leva />
+      <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions}/>
       <Canvas camera={{ position: [5, 5, 10], fov: 50 }}> {/* 3D Canvas with a camera at [5,5,10]. */}
         <ambientLight intensity={0.5} /> {/* Overall illumination. */}
         <directionalLight position={[5, 5, 5]} intensity={1} /> {/* Directional sunlight. */}
 
-        {/* Three ThermalZones at different positions. */}
+        {/* Three ThermalZones at different positions.
         <ThermalZone
           position={[-2, 0, 0]}
           size={[2, 2, 2]}
@@ -145,7 +181,18 @@ export default function ThermalModel() {
           position={[2, 0, 0]}
           size={[2, 2, 2]}
           temperature={controls.temp3 || 18}
-        />
+        /> */}
+        {/* Grid of ThermalZones */}
+        {Array.from({ length: dimensions.width }).map((_, rowIndex) => // For each row, create a ThermalZone.
+            Array.from({ length: dimensions.height }).map((_, colIndex) => (  // For each column in the row, create a ThermalZone.
+              <ThermalZone
+                key={`${rowIndex}-${colIndex}`}
+                position={[colIndex * 2 - 4, 0, rowIndex * 2 - 2]}
+                size={[2, 2, 2]}
+                temperature={controls[`temp${rowIndex * 5 + colIndex + 1}`] || 22}
+              />
+            ))
+          )}
 
         <OrbitControls /> {/* Allows orbiting and zooming with the mouse. */}
       </Canvas>
