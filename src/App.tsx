@@ -125,7 +125,8 @@ const ThermalZone = ({ position, size, temperature }: { position: [number, numbe
       // const hslColor = `hsl(${240 * (1 - normalized)}, 100%, 50%)`;
 
       // Return HSL or THREE.js color
-      return new THREE.Color(`rgb(${Math.round(red * 255)}, 0, ${Math.round(blue * 255)})`);
+      // TODO: make translucent
+      return new THREE.Color(`rgba(${Math.round(red * 255)}, 0, ${Math.round(blue * 255)}, 0.1)`);
   };
 
   return (
@@ -148,7 +149,7 @@ export default function ThermalModel() {
   // We initialize Leva controls outside of useEffect to avoid potential sandbox issues.
   const tempControls: { [key: string]: { value: number; min: number; max: number; step: number } } = {};
   for (let i = 0; i < dimensions.width * dimensions.height; i++) {
-    tempControls[`temp${i + 1}`] = { value: 22, min: minTemp, max: maxTemp, step: 1 };
+    tempControls[`temp${i + 1}`] = { value: Math.floor(Math.random() * (maxTemp - minTemp + 1)) + minTemp, min: minTemp, max: maxTemp, step: 1 };
   }
   const controls = useControls(tempControls);
 
@@ -158,12 +159,12 @@ export default function ThermalModel() {
   }
 
   return (
-    <>
+    <div className="h-screen w-screen">
       {/* Render the Leva panel for adjusting controls. */}
       <Leva />
-      <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions}/>
-      <Canvas camera={{ position: [5, 5, 10], fov: 50 }}> {/* 3D Canvas with a camera at [5,5,10]. */}
-        <ambientLight intensity={0.5} /> {/* Overall illumination. */}
+      <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions} />
+      <Canvas className='border border-red-700' camera={{ position: [5, 5, 10], fov: 50 }}> {/* 3D Canvas with a camera at [5,5,10]. */}
+        <ambientLight intensity={1} /> {/* Overall illumination. */}
         <directionalLight position={[5, 5, 5]} intensity={1} /> {/* Directional sunlight. */}
 
         {/* Three ThermalZones at different positions.
@@ -189,14 +190,14 @@ export default function ThermalModel() {
                 key={`${rowIndex}-${colIndex}`}
                 position={[colIndex * 2 - 4, 0, rowIndex * 2 - 2]}
                 size={[2, 2, 2]}
-                temperature={controls[`temp${rowIndex * 5 + colIndex + 1}`] || 22}
+                temperature={controls[`temp${rowIndex * dimensions.width + colIndex + 1}`] || 22}
               />
             ))
           )}
 
         <OrbitControls /> {/* Allows orbiting and zooming with the mouse. */}
       </Canvas>
-    </>
+    </div>
   );
 }
 
