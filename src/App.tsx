@@ -146,10 +146,10 @@ export default function ThermalModel() {
   const [dimensions, setDimensions] = useState({ height: 10, width: 10 });
 
   // We initialize Leva controls outside of useEffect to avoid potential sandbox issues.
-    const tempControls: { [key: string]: { value: number; min: number; max: number; step: number } } = {};
-    for (let i = 0; i < dimensions.width * dimensions.height; i++) {
-      tempControls[`temp${i + 1}`] = { value: 22, min: minTemp, max: maxTemp, step: 1 };
-    }
+  const tempControls: { [key: string]: { value: number; min: number; max: number; step: number } } = {};
+  for (let i = 0; i < dimensions.width * dimensions.height; i++) {
+    tempControls[`temp${i + 1}`] = { value: 22, min: minTemp, max: maxTemp, step: 1 };
+  }
   const controls = useControls(tempControls);
 
   if (!controls) {
