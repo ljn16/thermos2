@@ -82,14 +82,25 @@ const FloorDimensionsInput = ({
   );
 };
 
+/**
+ * ThermalZone now accepts an `id`, an `isSelected` flag, and an `onClick` handler.
+ * When clicked, it calls the provided onClick callback with its id.
+ * If selected, the emissive property is set to yellow.
+ */
 const ThermalZone = ({
+  id,
   position,
   size,
   temperature,
+  isSelected,
+  onClick,
 }: {
+  id: string;
   position: [number, number, number];
   size: [number, number, number];
   temperature: number;
+  isSelected?: boolean;
+  onClick?: (id: string) => void;
 }) => {
   // Map temperature to a color.
   const getColor = (temp: number) => {
@@ -102,12 +113,19 @@ const ThermalZone = ({
   };
 
   return (
-    <mesh position={position}>
+    <mesh
+      position={position}
+      onClick={(e) => {
+        e.stopPropagation();
+        onClick && onClick(id);
+      }}
+    >
       <boxGeometry args={size} />
       <meshStandardMaterial
-        color={getColor(temperature)}
+        color={isSelected ? getColor(temperature).multiplyScalar(0.5) : getColor(temperature)}
         transparent
-        opacity={0.9} // Adjust translucency as needed.
+        emissive={isSelected ? new THREE.Color(0xffff00) : new THREE.Color(0x000000)}
+        opacity={0.9}
       />
     </mesh>
   );
@@ -154,6 +172,7 @@ export default function ThermalModel() {
   const [dimensions, setDimensions] = useState<Dimensions>({ height: 10, width: 10 });
   const [ambientTemp, setAmbientTemp] = useState({ indoor: 22, outdoor: 22 });
   const [controlsValues, setControlsValues] = useState<Record<string, number>>({});
+  const [selectedZone, setSelectedZone] = useState<string | null>(null);
 
   return (
     <div className="h-screen w-screen">
@@ -166,10 +185,7 @@ export default function ThermalModel() {
         onIndoorChange={(newValue) => setAmbientTemp({ ...ambientTemp, indoor: newValue })}
         onOutdoorChange={(newValue) => setAmbientTemp({ ...ambientTemp, outdoor: newValue })}
       />
-      {/* 
-        By setting the key based on dimensions, this component remounts whenever the grid changes.
-        It then passes the updated control values to ThermalModel via setControlsValues.
-      */}
+      {/* Remount ControlsWrapper based on dimensions */}
       <ControlsWrapper
         key={`${dimensions.width}-${dimensions.height}`}
         dimensions={dimensions}
@@ -182,9 +198,11 @@ export default function ThermalModel() {
         {Array.from({ length: dimensions.width }).map((_, rowIndex) =>
           Array.from({ length: dimensions.height }).map((_, colIndex) => {
             const controlKey = `temp${rowIndex * dimensions.width + colIndex + 1}`;
+            const zoneId = `${rowIndex}-${colIndex}`;
             return (
               <ThermalZone
-                key={`${rowIndex}-${colIndex}`}
+                key={zoneId}
+                id={zoneId}
                 // Center the grid based on dimensions
                 position={[
                   colIndex * 2 - dimensions.width,
@@ -193,6 +211,8 @@ export default function ThermalModel() {
                 ]}
                 size={[2, 2, 2]}
                 temperature={controlsValues[controlKey] ?? 22}
+                isSelected={selectedZone === zoneId}
+                onClick={(id) => setSelectedZone(id)}
               />
             );
           })
