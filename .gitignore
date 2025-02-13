@@ -28,3 +28,6 @@ dist-ssr
 amplify_outputs*
 amplifyconfiguration*
 amplify_outputs.json
+
+# Ignore CodeArchieve.tsx
+CodeArchieve.tsx
