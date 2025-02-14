@@ -24,23 +24,28 @@ const AmbientTempInput = ({
   onOutdoorChange: (newValue: number) => void;
 }) => {
   return (
-    <div>
-      <label>
-        Indoor Ambient Temperature:
-        <input
-          type="number"
-          value={indoorTemp}
-          onChange={(e) => onIndoorChange(parseFloat(e.target.value))}
-        />
-      </label>
-      <label>
-        Outdoor Ambient Temperature:
-        <input
-          type="number"
-          value={outdoorTemp}
-          onChange={(e) => onOutdoorChange(parseFloat(e.target.value))}
-        />
-      </label>
+    <div className="flex flex-col">
+      <h3 className="font-semibold">Ambient Temperature</h3>
+      <div className="space-x-2">
+        <label>
+          Indoor
+          <input
+            className="w-12 rounded-sm ml-1"
+            type="number"
+            value={indoorTemp}
+            onChange={(e) => onIndoorChange(parseFloat(e.target.value))}
+          />
+        </label>
+        <label>
+          Outdoor
+          <input
+            className="w-12 rounded-sm ml-1"
+            type="number"
+            value={outdoorTemp}
+            onChange={(e) => onOutdoorChange(parseFloat(e.target.value))}
+          />
+        </label>
+      </div>
     </div>
   );
 };
@@ -59,25 +64,31 @@ const FloorDimensionsInput = ({
   };
 
   return (
-    <div>
-      <label>
-        Height:
-        <input
-          type="number"
-          name="height"
-          value={dimensions.height}
-          onChange={handleChange}
-        />
-      </label>
-      <label>
-        Width:
-        <input
-          type="number"
-          name="width"
-          value={dimensions.width}
-          onChange={handleChange}
-        />
-      </label>
+    <div className="flex flex-col">
+      <h3 className="font-semibold">Floor Dimensions</h3>
+      <div className="space-x-2">
+        <label>
+          Height
+          <input
+            className="w-12 rounded-sm ml-1"
+            type="number"
+            name="height"
+            value={dimensions.height}
+            onChange={handleChange}
+          />
+        </label>
+        <label>
+          Width
+          <input
+            className="w-12 rounded-sm ml-1"
+            type="number"
+            name="width"
+            value={dimensions.width}
+            onChange={handleChange}
+          />
+        </label>
+      </div>
+
     </div>
   );
 };
@@ -178,7 +189,7 @@ export default function ThermalModel() {
     <div className="h-screen w-screen">
       {/* Remount the Leva panel if needed by keying it on dimensions */}
       <Leva collapsed={false} />
-      <div className="fixed top-1 left-1 p-4 space-x-4 z-10 bg-white bg-opacity-5 backdrop-filter backdrop-blur-sm rounded">
+      <div className="fixed top-1 left-1 p-4  z-10 bg-white bg-opacity-5 backdrop-filter backdrop-blur-sm rounded space-y-2">
         <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions} />
         <AmbientTempInput
           indoorTemp={ambientTemp.indoor}
@@ -194,7 +205,7 @@ export default function ThermalModel() {
         dimensions={dimensions}
         onControlsUpdate={(newControls) => setControlsValues(newControls)}
       />
-      <Canvas className="border border-red-700" camera={{ position: [5, 5, 10], fov: 50 }}>
+      <Canvas /* className="border border-red-700" */ camera={{ position: [5, 5, 10], fov: 50 }}>
         <ambientLight intensity={1} />
         <directionalLight position={[5, 5, 5]} intensity={1} />
         {/* Render a grid of ThermalZones */}
