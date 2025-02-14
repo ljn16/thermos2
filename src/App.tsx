@@ -178,13 +178,16 @@ export default function ThermalModel() {
     <div className="h-screen w-screen">
       {/* Remount the Leva panel if needed by keying it on dimensions */}
       <Leva collapsed={false} />
-      <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions} />
-      <AmbientTempInput
-        indoorTemp={ambientTemp.indoor}
-        outdoorTemp={ambientTemp.outdoor}
-        onIndoorChange={(newValue) => setAmbientTemp({ ...ambientTemp, indoor: newValue })}
-        onOutdoorChange={(newValue) => setAmbientTemp({ ...ambientTemp, outdoor: newValue })}
-      />
+      <div className="fixed top-1 left-1 p-4 space-x-4 z-10 bg-white bg-opacity-5 backdrop-filter backdrop-blur-sm rounded">
+        <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions} />
+        <AmbientTempInput
+          indoorTemp={ambientTemp.indoor}
+          outdoorTemp={ambientTemp.outdoor}
+          onIndoorChange={(newValue) => setAmbientTemp({ ...ambientTemp, indoor: newValue })}
+          onOutdoorChange={(newValue) => setAmbientTemp({ ...ambientTemp, outdoor: newValue })}
+        />
+      </div>
+
       {/* Remount ControlsWrapper based on dimensions */}
       <ControlsWrapper
         key={`${dimensions.width}-${dimensions.height}`}
@@ -195,28 +198,27 @@ export default function ThermalModel() {
         <ambientLight intensity={1} />
         <directionalLight position={[5, 5, 5]} intensity={1} />
         {/* Render a grid of ThermalZones */}
-        {Array.from({ length: dimensions.width }).map((_, rowIndex) =>
-          Array.from({ length: dimensions.height }).map((_, colIndex) => {
-            const controlKey = `temp${rowIndex * dimensions.width + colIndex + 1}`;
-            const zoneId = `${rowIndex}-${colIndex}`;
-            return (
-              <ThermalZone
-                key={zoneId}
-                id={zoneId}
-                // Center the grid based on dimensions
-                position={[
-                  colIndex * 2 - dimensions.width,
-                  0,
-                  rowIndex * 2 - dimensions.height,
-                ]}
-                size={[2, 2, 2]}
-                temperature={controlsValues[controlKey] ?? 22}
-                isSelected={selectedZone === zoneId}
-                onClick={(id) => setSelectedZone(id)}
-              />
-            );
-          })
-        )}
+        {Array.from({ length: dimensions.height }).map((_, rowIndex) =>
+  Array.from({ length: dimensions.width }).map((_, colIndex) => {
+    const controlKey = `temp${rowIndex * dimensions.width + colIndex + 1}`;
+    const zoneId = `${rowIndex}-${colIndex}`;
+    return (
+      <ThermalZone
+        key={zoneId}
+        id={zoneId}
+        position={[
+          (colIndex - dimensions.width / 2) * 2,
+          0,
+          (rowIndex - dimensions.height / 2) * 2,
+        ]}
+        size={[2, 2, 2]}
+        temperature={controlsValues[controlKey] ?? 22}
+        isSelected={selectedZone === zoneId}
+        onClick={(id) => setSelectedZone(id)}
+      />
+    );
+  })
+)}
         <OrbitControls />
       </Canvas>
     </div>
