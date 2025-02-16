@@ -1,4 +1,4 @@
-import { Canvas } from "@react-three/fiber"; // 3D rendering canvas.
+import { Canvas, useFrame } from "@react-three/fiber"; // 3D rendering canvas and frame loop.
 import { OrbitControls, Html, Text } from "@react-three/drei"; // For orbiting, zooming, HTML overlays, and 3D text.
 import { useState, useMemo, useEffect } from "react";
 import * as THREE from "three";
@@ -113,7 +113,7 @@ const ThermalZone = ({
   isSelected?: boolean;
   onClick?: (id: string) => void;
 }) => {
-  // Map temperature to a color.
+  // Map temperature to a color: blue for cold, red for hot.
   const getColor = (temp: number) => {
     const clampedTemp = Math.max(minTemp, Math.min(maxTemp, temp));
     const normalized = (clampedTemp - minTemp) / (maxTemp - minTemp);
@@ -175,7 +175,7 @@ const ThermalZone = ({
 
 /**
  * AxisLabels renders 3D text labels along the grid edges.
- * These labels are actual 3D objects and will be occluded by other objects.
+ * These labels are actual 3D objects (using <Text>) so they are occluded by other objects.
  * They are positioned outside the floorplan using a margin.
  */
 function AxisLabels({ dimensions }: { dimensions: Dimensions }) {
@@ -260,15 +260,89 @@ function ControlsWrapper({ dimensions, onControlsUpdate }: ControlsWrapperProps)
   return null;
 }
 
+/**
+ * HeatSimulation is a component rendered inside <Canvas> that uses useFrame
+ * to update the grid temperatures (stored in gridTemps) each frame.
+ */
+function HeatSimulation({
+  gridTemps,
+  setGridTemps,
+  dimensions,
+  isSimulating,
+  setIsSimulating,
+}: {
+  gridTemps: number[];
+  setGridTemps: (temps: number[]) => void;
+  dimensions: Dimensions;
+  isSimulating: boolean;
+  setIsSimulating: (sim: boolean) => void;
+}) {
+  useFrame((state, delta) => {
+    if (!isSimulating || gridTemps.length === 0) return;
+
+    const newTemps = [...gridTemps];
+    let maxDiff = 0;
+    const { width, height } = dimensions;
+    const diffusionRate = .1; // adjust to control speed of heat flow
+
+    for (let row = 0; row < height; row++) {
+      for (let col = 0; col < width; col++) {
+        const index = row * width + col;
+        const T = gridTemps[index];
+
+        // Get neighbors (using insulated boundary conditions: use same value if neighbor missing)
+        const T_left  = col > 0 ? gridTemps[row * width + (col - 1)] : T;
+        const T_right = col < width - 1 ? gridTemps[row * width + (col + 1)] : T;
+        const T_up    = row > 0 ? gridTemps[(row - 1) * width + col] : T;
+        const T_down  = row < height - 1 ? gridTemps[(row + 1) * width + col] : T;
+
+        // Discrete Laplacian:
+        const laplacian = T_left + T_right + T_up + T_down - 4 * T;
+        const dT = diffusionRate * delta * laplacian;
+        newTemps[index] = T + dT;
+        maxDiff = Math.max(maxDiff, Math.abs(dT));
+      }
+    }
+
+    setGridTemps(newTemps);
+
+    // If the changes are very small, consider equilibrium reached.
+    if (maxDiff < 0.001) {
+      setIsSimulating(false);
+    }
+  });
+  return null;
+}
+
+/**
+ * ThermalModel holds the simulation state for grid temperatures.
+ * It initializes gridTemps from the Leva controls and ambient temperature,
+ * then runs the simulation via the HeatSimulation component.
+ */
 export default function ThermalModel() {
   const [dimensions, setDimensions] = useState<Dimensions>({ height: 10, width: 10 });
   const [ambientTemp, setAmbientTemp] = useState({ indoor: 22, outdoor: 22 });
   const [controlsValues, setControlsValues] = useState<Record<string, number>>({});
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
+  const [gridTemps, setGridTemps] = useState<number[]>([]);
+  const [isSimulating, setIsSimulating] = useState<boolean>(true);
+
+  // When the Leva controls, dimensions, or ambient temperature change, reset the simulation state.
+  useEffect(() => {
+    const newTemps: number[] = [];
+    for (let row = 0; row < dimensions.height; row++) {
+      for (let col = 0; col < dimensions.width; col++) {
+        const key = `temp-${row}-${col}`;
+        newTemps.push(controlsValues[key] !== undefined ? controlsValues[key] : ambientTemp.indoor);
+      }
+    }
+    setGridTemps(newTemps);
+    setIsSimulating(true);
+  }, [controlsValues, dimensions, ambientTemp.indoor]);
 
   return (
     <div className="h-screen w-screen">
-      {/* Remount the Leva panel if needed by keying it on dimensions */}
+      {/* Leva panel keyed by dimensions */}
       <Leva collapsed={false} />
       <div className="fixed top-1 left-1 p-4 z-10 bg-white bg-opacity-5 backdrop-filter backdrop-blur-sm rounded space-y-2">
         <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions} />
@@ -284,7 +358,6 @@ export default function ThermalModel() {
         />
       </div>
 
-      {/* Remount ControlsWrapper based on dimensions */}
       <ControlsWrapper
         key={`${dimensions.width}-${dimensions.height}`}
         dimensions={dimensions}
@@ -295,10 +368,10 @@ export default function ThermalModel() {
         <ambientLight intensity={1} />
         <directionalLight position={[5, 5, 5]} intensity={1} />
 
-        {/* Render grid thermal zones */}
+        {/* Render grid thermal zones using the simulation state */}
         {Array.from({ length: dimensions.height }).map((_, rowIndex) =>
           Array.from({ length: dimensions.width }).map((_, colIndex) => {
-            const controlKey = `temp-${rowIndex}-${colIndex}`;
+            const index = rowIndex * dimensions.width + colIndex;
             const zoneId = `${rowIndex}-${colIndex}`;
             return (
               <ThermalZone
@@ -310,7 +383,7 @@ export default function ThermalModel() {
                   (rowIndex - dimensions.height / 2) * 2,
                 ]}
                 size={[2, 2, 2]}
-                temperature={controlsValues[controlKey] ?? 22}
+                temperature={gridTemps[index] ?? 22}
                 isSelected={selectedZone === zoneId}
                 onClick={(id) => setSelectedZone(id)}
               />
@@ -318,7 +391,16 @@ export default function ThermalModel() {
           })
         )}
 
-        {/* Add axis labels rendered as 3D text (subject to scene depth) */}
+        {/* Render the heat simulation updater */}
+        <HeatSimulation
+          gridTemps={gridTemps}
+          setGridTemps={setGridTemps}
+          dimensions={dimensions}
+          isSimulating={isSimulating}
+          setIsSimulating={setIsSimulating}
+        />
+
+        {/* Axis labels rendered as 3D text */}
         <AxisLabels dimensions={dimensions} />
 
         <OrbitControls />
