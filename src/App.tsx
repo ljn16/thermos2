@@ -1,8 +1,12 @@
-import { Canvas, useFrame } from "@react-three/fiber";
+import { Canvas, useFrame, extend } from "@react-three/fiber";
 import { OrbitControls, Html, Text } from "@react-three/drei";
 import { useState, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { LevaPanel, useControls, useCreateStore } from "leva";
+
+// Extend THREE so that ArrowHelper can be used as a JSX element if needed.
+import { ArrowHelper } from "three";
+extend({ ArrowHelper });
 
 const minTemp = -20;
 const maxTemp = 50;
@@ -90,12 +94,18 @@ const FloorDimensionsInput = ({
   );
 };
 
+/**
+ * ThermalZone renders a box for a zone.
+ * It now accepts an additional prop `isHeatSource` to indicate a constant heat source.
+ * When a zone is a heat source, a wireframe border is rendered.
+ */
 const ThermalZone = ({
   id,
   position,
   size,
   temperature,
   isSelected,
+  isHeatSource,
   onClick,
 }: {
   id: string;
@@ -103,9 +113,10 @@ const ThermalZone = ({
   size: [number, number, number];
   temperature: number;
   isSelected?: boolean;
+  isHeatSource?: boolean;
   onClick?: (id: string) => void;
 }) => {
-  // Map temperature (minTemp to maxTemp) to a color from blue to red.
+  // Map temperature (minTemp to maxTemp) to a color from blue (cold) to red (hot).
   const getColor = (temp: number) => {
     const clamped = Math.max(minTemp, Math.min(maxTemp, temp));
     const norm = (clamped - minTemp) / (maxTemp - minTemp);
@@ -135,6 +146,13 @@ const ThermalZone = ({
         emissive={isSelected ? new THREE.Color(0xffff00) : new THREE.Color(0x000000)}
         opacity={0.9}
       />
+      {isHeatSource && (
+        // Render a slightly larger wireframe box to indicate constant heat source.
+        <mesh>
+          <boxGeometry args={[2.2, 2.2, 2.2]} />
+          <meshBasicMaterial color="yellow" wireframe />
+        </mesh>
+      )}
       {isSelected && (
         <Html position={[0, 1.5, 0]} distanceFactor={40} center>
           <div
@@ -154,8 +172,11 @@ const ThermalZone = ({
       )}
     </mesh>
   );
-};
+}
 
+/**
+ * AxisLabels renders 3D text labels along the grid edges.
+ */
 function AxisLabels({ dimensions }: { dimensions: Dimensions }) {
   const margin = 2;
   const labels = [];
@@ -224,7 +245,6 @@ function ControlsWrapper({ dimensions, onControlsUpdate, store }: ControlsWrappe
     return config;
   }, [dimensions]);
 
-  // Pass the store to useControls so that updates from the simulation can be reflected.
   const controls = useControls(controlsConfig, { store });
   useEffect(() => {
     onControlsUpdate(controls);
@@ -234,8 +254,9 @@ function ControlsWrapper({ dimensions, onControlsUpdate, store }: ControlsWrappe
 }
 
 /**
- * HeatSimulation updates the grid temperatures each frame using a discrete Laplacian.
- * It also uses the provided store to update the Leva controls in real time.
+ * HeatSimulation updates grid temperatures each frame.
+ * If a cell is designated as a heat source (provided in heatSources),
+ * its temperature remains constant.
  */
 function HeatSimulation({
   gridTemps,
@@ -244,6 +265,7 @@ function HeatSimulation({
   isSimulating,
   setIsSimulating,
   store,
+  heatSources,
 }: {
   gridTemps: number[];
   setGridTemps: (temps: number[]) => void;
@@ -251,6 +273,7 @@ function HeatSimulation({
   isSimulating: boolean;
   setIsSimulating: (sim: boolean) => void;
   store: any;
+  heatSources: Record<string, number>;
 }) {
   useFrame((state, delta) => {
     if (!isSimulating || gridTemps.length === 0) return;
@@ -262,6 +285,12 @@ function HeatSimulation({
     for (let row = 0; row < height; row++) {
       for (let col = 0; col < width; col++) {
         const index = row * width + col;
+        const cellId = `${row}-${col}`;
+        // If this cell is a heat source, force its temperature and skip update.
+        if (heatSources[cellId] !== undefined) {
+          newTemps[index] = heatSources[cellId];
+          continue;
+        }
         const T = gridTemps[index];
         const T_left = col > 0 ? gridTemps[row * width + (col - 1)] : T;
         const T_right = col < width - 1 ? gridTemps[row * width + (col + 1)] : T;
@@ -281,13 +310,122 @@ function HeatSimulation({
         store.set({ [key]: newTemps[row * width + col] });
       }
     }
-
     setGridTemps(newTemps);
     if (maxDiff < 0.001) {
       setIsSimulating(false);
     }
   });
   return null;
+}
+
+/**
+ * HeatFlowArrows computes temperature gradients and renders arrows showing heat flow.
+ */
+function HeatFlowArrows({
+  gridTemps,
+  dimensions,
+}: {
+  gridTemps: number[];
+  dimensions: Dimensions;
+}) {
+  const arrows = [];
+  const { width, height } = dimensions;
+  for (let row = 0; row < height; row++) {
+    for (let col = 0; col < width; col++) {
+      const index = row * width + col;
+      const T = gridTemps[index];
+      const T_left = col > 0 ? gridTemps[row * width + (col - 1)] : T;
+      const T_right = col < width - 1 ? gridTemps[row * width + (col + 1)] : T;
+      const T_up = row > 0 ? gridTemps[(row - 1) * width + col] : T;
+      const T_down = row < height - 1 ? gridTemps[(row + 1) * width + col] : T;
+      const gradientX = (T_right - T_left) / 2;
+      const gradientZ = (T_down - T_up) / 2;
+      const flow = new THREE.Vector3(-gradientX, 0, -gradientZ);
+      const magnitude = flow.length();
+      if (magnitude < 0.01) continue;
+      flow.normalize();
+      const arrowLength = magnitude * 2;
+      const arrowColor = 0x00ff00; // green
+      const origin = new THREE.Vector3((col - width / 2) * 2, 0.5, (row - height / 2) * 2);
+      arrows.push(
+        <arrowHelper
+          key={`arrow-${row}-${col}`}
+          args={[flow, origin, arrowLength, arrowColor, arrowLength * 0.3, arrowLength * 0.2]}
+        />
+      );
+    }
+  }
+  return <group>{arrows}</group>;
+}
+
+/**
+ * HeatSourceControl renders a UI panel to toggle a cell as a constant heat source.
+ */
+function HeatSourceControl({
+  selectedZone,
+  heatSources,
+  setHeatSources,
+  dimensions,
+  gridTemps,
+}: {
+  selectedZone: string | null;
+  heatSources: Record<string, number>;
+  setHeatSources: (hs: Record<string, number>) => void;
+  dimensions: Dimensions;
+  gridTemps: number[];
+}) {
+  if (!selectedZone) return null;
+  // Parse the selected zone id "row-col"
+  const [rowStr, colStr] = selectedZone.split("-");
+  const row = parseInt(rowStr);
+  const col = parseInt(colStr);
+  const index = row * dimensions.width + col;
+  const currentTemp = gridTemps[index] ?? 22;
+  const isHeatSource = heatSources[selectedZone] !== undefined;
+  return (
+    <div
+      className="fixed bottom-4 right-4 p-4 bg-white bg-opacity-80 rounded shadow"
+      style={{ zIndex: 1000 }}
+    >
+      <h3 className="font-semibold">Heat Source Control</h3>
+      <label className="flex items-center">
+        <input
+          type="checkbox"
+          checked={isHeatSource}
+          onChange={(e) => {
+            if (e.target.checked) {
+              // Set the current cell as a heat source with its current temperature.
+              setHeatSources((prev) => ({ ...prev, [selectedZone]: currentTemp }));
+            } else {
+              // Remove the heat source.
+              setHeatSources((prev) => {
+                const copy = { ...prev };
+                delete copy[selectedZone];
+                return copy;
+              });
+            }
+          }}
+        />
+        <span className="ml-2">Set as Heat Source</span>
+      </label>
+      {isHeatSource && (
+        <div className="mt-2">
+          <label>
+            Constant Temperature:
+            <input
+              type="number"
+              value={heatSources[selectedZone]}
+              onChange={(e) => {
+                const newVal = parseFloat(e.target.value);
+                setHeatSources((prev) => ({ ...prev, [selectedZone]: newVal }));
+              }}
+              className="w-16 ml-2 rounded-sm"
+            />
+          </label>
+        </div>
+      )}
+    </div>
+  );
 }
 
 export default function ThermalModel() {
@@ -297,11 +435,12 @@ export default function ThermalModel() {
   const [selectedZone, setSelectedZone] = useState<string | null>(null);
   const [gridTemps, setGridTemps] = useState<number[]>([]);
   const [isSimulating, setIsSimulating] = useState<boolean>(true);
+  const [heatSources, setHeatSources] = useState<Record<string, number>>({});
 
   // Create a Leva store so we can update it programmatically.
   const levaStore = useCreateStore();
 
-  // When controls, dimensions, or ambient temperature change, reset the simulation.
+  // Reset simulation state when controls, dimensions, or ambient temperature change.
   useEffect(() => {
     const newTemps: number[] = [];
     for (let row = 0; row < dimensions.height; row++) {
@@ -340,6 +479,15 @@ export default function ThermalModel() {
         store={levaStore}
       />
 
+      {/* Heat source control overlay */}
+      <HeatSourceControl
+        selectedZone={selectedZone}
+        heatSources={heatSources}
+        setHeatSources={setHeatSources}
+        dimensions={dimensions}
+        gridTemps={gridTemps}
+      />
+
       <Canvas camera={{ position: [5, 5, 10], fov: 50 }}>
         <ambientLight intensity={1} />
         <directionalLight position={[5, 5, 5]} intensity={1} />
@@ -360,6 +508,7 @@ export default function ThermalModel() {
                 size={[2, 2, 2]}
                 temperature={gridTemps[index] ?? 22}
                 isSelected={selectedZone === zoneId}
+                isHeatSource={heatSources[zoneId] !== undefined}
                 onClick={(id) => setSelectedZone(id)}
               />
             );
@@ -373,7 +522,10 @@ export default function ThermalModel() {
           isSimulating={isSimulating}
           setIsSimulating={setIsSimulating}
           store={levaStore}
+          heatSources={heatSources}
         />
+
+        {/* <HeatFlowArrows gridTemps={gridTemps} dimensions={dimensions} /> */}
 
         <AxisLabels dimensions={dimensions} />
 
