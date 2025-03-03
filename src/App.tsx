@@ -54,6 +54,7 @@ const AmbientTempInput = ({
   </div>
 );
 
+
 const FloorDimensionsInput = ({
   dimensions,
   onDimensionsChange,
@@ -461,7 +462,7 @@ export default function ThermalModel() {
       <LevaPanel store={levaStore} collapsed={false} />
       <div className="fixed top-1 left-1 p-4 z-10 bg-white bg-opacity-5 backdrop-filter backdrop-blur-sm rounded space-y-2">
         <FloorDimensionsInput dimensions={dimensions} onDimensionsChange={setDimensions} />
-        <AmbientTempInput
+        {/* <AmbientTempInput
           indoorTemp={ambientTemp.indoor}
           outdoorTemp={ambientTemp.outdoor}
           onIndoorChange={(newValue) =>
@@ -470,7 +471,7 @@ export default function ThermalModel() {
           onOutdoorChange={(newValue) =>
             setAmbientTemp({ ...ambientTemp, outdoor: newValue })
           }
-        />
+        /> */}
       </div>
 
       <ControlsWrapper
