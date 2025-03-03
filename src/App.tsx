@@ -16,6 +16,7 @@ interface Dimensions {
   width: number;
 }
 
+//* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Ambient Temperature Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ *//
 const AmbientTempInput = ({
   indoorTemp,
   outdoorTemp,
@@ -280,7 +281,7 @@ function HeatSimulation({
     const { width, height } = dimensions;
     const newTemps = [...gridTemps];
     let maxDiff = 0;
-    const diffusionRate = 0.51; // lower rate for longer simulation
+    const diffusionRate = 0.1; // lower rate for longer simulation
 
     for (let row = 0; row < height; row++) {
       for (let col = 0; col < width; col++) {
@@ -406,7 +407,7 @@ function HeatSourceControl({
             }
           }}
         />
-        <span className="ml-2">Set as Heat Source</span>
+        <span className="ml-2">Set as Constant Temperature Source</span>
       </label>
       {isHeatSource && (
         <div className="mt-2">
