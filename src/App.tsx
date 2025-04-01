@@ -4,6 +4,10 @@ import { useState, useMemo, useEffect } from "react";
 import * as THREE from "three";
 import { LevaPanel, useControls, useCreateStore } from "leva";
 
+import FloorDimensionsInput from "./components/floorDimensions";
+import ThermalZone from "./components/thermalZone";
+import AxisLabels from "./components/axisLabels";
+
 // Extend THREE so that ArrowHelper can be used as a JSX element if needed.
 import { ArrowHelper } from "three";
 extend({ ArrowHelper });
@@ -16,209 +20,44 @@ interface Dimensions {
   width: number;
 }
 
-//* ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ Ambient Temperature Input ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ *//
-const AmbientTempInput = ({
-  indoorTemp,
-  outdoorTemp,
-  onIndoorChange,
-  onOutdoorChange,
-}: {
-  indoorTemp: number;
-  outdoorTemp: number;
-  onIndoorChange: (newValue: number) => void;
-  onOutdoorChange: (newValue: number) => void;
-}) => (
-  <div className="flex flex-col">
-    <hr className="my-2 opacity-10" />
-    <h3 className="font-semibold text-center">Ambient Temperature</h3>
-    <div className="space-x-2">
-      <label>
-        Indoor
-        <input
-          className="w-12 rounded-sm ml-1"
-          type="number"
-          value={indoorTemp}
-          onChange={(e) => onIndoorChange(parseFloat(e.target.value))}
-        />
-      </label>
-      <label>
-        Outdoor
-        <input
-          className="w-12 rounded-sm ml-1"
-          type="number"
-          value={outdoorTemp}
-          onChange={(e) => onOutdoorChange(parseFloat(e.target.value))}
-        />
-      </label>
-    </div>
-  </div>
-);
+// const AmbientTempInput = ({
+//   indoorTemp,
+//   outdoorTemp,
+//   onIndoorChange,
+//   onOutdoorChange,
+// }: {
+//   indoorTemp: number;
+//   outdoorTemp: number;
+//   onIndoorChange: (newValue: number) => void;
+//   onOutdoorChange: (newValue: number) => void;
+// }) => (
+//   <div className="flex flex-col">
+//     <hr className="my-2 opacity-10" />
+//     <h3 className="font-semibold text-center">Ambient Temperature</h3>
+//     <div className="space-x-2">
+//       <label>
+//         Indoor
+//         <input
+//           className="w-12 rounded-sm ml-1"
+//           type="number"
+//           value={indoorTemp}
+//           onChange={(e) => onIndoorChange(parseFloat(e.target.value))}
+//         />
+//       </label>
+//       <label>
+//         Outdoor
+//         <input
+//           className="w-12 rounded-sm ml-1"
+//           type="number"
+//           value={outdoorTemp}
+//           onChange={(e) => onOutdoorChange(parseFloat(e.target.value))}
+//         />
+//       </label>
+//     </div>
+//   </div>
+// );
 
 
-const FloorDimensionsInput = ({
-  dimensions,
-  onDimensionsChange,
-}: {
-  dimensions: Dimensions;
-  onDimensionsChange: (newDimensions: Dimensions) => void;
-}) => {
-  const handleChange = (e: React.ChangeEvent<HTMLInputElement>) => {
-    const { name, value } = e.target;
-    onDimensionsChange({ ...dimensions, [name]: parseInt(value, 10) });
-  };
-
-  return (
-    <div className="flex flex-col">
-      <h3 className="font-semibold text-center">Floor Dimensions</h3>
-      <div className="space-x-2">
-        <label>
-          Height
-          <input
-            className="w-12 rounded-sm ml-1"
-            type="number"
-            name="height"
-            value={dimensions.height}
-            onChange={handleChange}
-          />
-        </label>
-        <label>
-          Width
-          <input
-            className="w-12 rounded-sm ml-1"
-            type="number"
-            name="width"
-            value={dimensions.width}
-            onChange={handleChange}
-          />
-        </label>
-      </div>
-    </div>
-  );
-};
-
-/**
- * ThermalZone renders a box for a zone.
- * It now accepts an additional prop `isHeatSource` to indicate a constant heat source.
- * When a zone is a heat source, a wireframe border is rendered.
- */
-const ThermalZone = ({
-  id,
-  position,
-  size,
-  temperature,
-  isSelected,
-  isHeatSource,
-  onClick,
-}: {
-  id: string;
-  position: [number, number, number];
-  size: [number, number, number];
-  temperature: number;
-  isSelected?: boolean;
-  isHeatSource?: boolean;
-  onClick?: (id: string) => void;
-}) => {
-  // Map temperature (minTemp to maxTemp) to a color from blue (cold) to red (hot).
-  const getColor = (temp: number) => {
-    const clamped = Math.max(minTemp, Math.min(maxTemp, temp));
-    const norm = (clamped - minTemp) / (maxTemp - minTemp);
-    return new THREE.Color(norm, 0, 1 - norm);
-  };
-
-  return (
-    <mesh
-      position={position}
-      onClick={(e) => {
-        e.stopPropagation();
-        onClick && onClick(id);
-      }}
-      onPointerOver={(e) => {
-        e.stopPropagation();
-        document.body.style.cursor = "pointer";
-      }}
-      onPointerOut={(e) => {
-        e.stopPropagation();
-        document.body.style.cursor = "default";
-      }}
-    >
-      <boxGeometry args={size} />
-      <meshStandardMaterial
-        color={isSelected ? getColor(temperature).multiplyScalar(0.5) : getColor(temperature)}
-        transparent
-        emissive={isSelected ? new THREE.Color(0xffff00) : new THREE.Color(0x000000)}
-        opacity={0.9}
-      />
-      {isHeatSource && (
-        // Render a slightly larger wireframe box to indicate constant heat source.
-        <mesh>
-          <boxGeometry args={[2.2, 2.2, 2.2]} />
-          <meshBasicMaterial color="yellow" wireframe />
-        </mesh>
-      )}
-      {isSelected && (
-        <Html position={[0, 1.5, 0]} distanceFactor={40} center>
-          <div
-            style={{
-              background: "rgba(0,0,0,0.6)",
-              color: "white",
-              padding: "4px 8px",
-              borderRadius: "3px",
-              fontSize: "14px",
-              pointerEvents: "none",
-              whiteSpace: "nowrap",
-            }}
-          >
-            {id}
-          </div>
-        </Html>
-      )}
-    </mesh>
-  );
-}
-
-/**
- * AxisLabels renders 3D text labels along the grid edges.
- */
-function AxisLabels({ dimensions }: { dimensions: Dimensions }) {
-  const margin = 2;
-  const labels = [];
-
-  for (let col = 0; col < dimensions.width; col++) {
-    const x = (col - dimensions.width / 2) * 2;
-    const z = (-dimensions.height / 2) * 2 - margin;
-    labels.push(
-      <Text
-        key={`col-${col}`}
-        position={[x, 0.1, z]}
-        fontSize={0.5}
-        color="black"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {`X: ${col}`}
-      </Text>
-    );
-  }
-
-  for (let row = 0; row < dimensions.height; row++) {
-    const z = (row - dimensions.height / 2) * 2;
-    const x = (-dimensions.width / 2) * 2 - margin;
-    labels.push(
-      <Text
-        key={`row-${row}`}
-        position={[x, 0.1, z]}
-        fontSize={0.5}
-        color="black"
-        anchorX="center"
-        anchorY="middle"
-      >
-        {`Y: ${row}`}
-      </Text>
-    );
-  }
-
-  return <>{labels}</>;
-}
 
 interface ControlsWrapperProps {
   dimensions: Dimensions;
